@@ -24,21 +24,37 @@ interface Transaction {
 }
 
 interface Balance {
-  income: string;
-  outcome: string;
-  total: string;
+  income: number;
+  outcome: number;
+  total: number;
+}
+
+interface Request {
+  data: {
+    transactions: [Transaction];
+    balance: Balance;
+  };
+}
+
+function getValueInReais(value: number): string {
+  return value.toLocaleString('pt-br', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+  });
 }
 
 const Dashboard: React.FC = () => {
-  // const [transactions, setTransactions] = useState<Transaction[]>([]);
-  // const [balance, setBalance] = useState<Balance>({} as Balance);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [balance, setBalance] = useState<Balance>({} as Balance);
 
   useEffect(() => {
-    async function loadTransactions(): Promise<void> {
-      // TODO
-    }
+    (async (): Promise<void> => {
+      const { data }: Request = await api.get('transactions');
 
-    loadTransactions();
+      setTransactions(data.transactions);
+      setBalance(data.balance);
+    })();
   }, []);
 
   return (
@@ -51,21 +67,27 @@ const Dashboard: React.FC = () => {
               <p>Entradas</p>
               <img src={income} alt="Income" />
             </header>
-            <h1 data-testid="balance-income">R$ 5.000,00</h1>
+            <h1 data-testid="balance-income">
+              {balance.income ? getValueInReais(balance.income) : 'R$ 0,00'}
+            </h1>
           </Card>
           <Card>
             <header>
               <p>Saídas</p>
               <img src={outcome} alt="Outcome" />
             </header>
-            <h1 data-testid="balance-outcome">R$ 1.000,00</h1>
+            <h1 data-testid="balance-outcome">
+              {balance.outcome ? getValueInReais(balance.outcome) : 'R$ 0,00'}
+            </h1>
           </Card>
           <Card total>
             <header>
               <p>Total</p>
               <img src={total} alt="Total" />
             </header>
-            <h1 data-testid="balance-total">R$ 4000,00</h1>
+            <h1 data-testid="balance-total">
+              {balance.total ? getValueInReais(balance.total) : 'R$ 0,00'}
+            </h1>
           </Card>
         </CardContainer>
 
@@ -80,20 +102,28 @@ const Dashboard: React.FC = () => {
               </tr>
             </thead>
 
-            <tbody>
-              <tr>
-                <td className="title">Computer</td>
-                <td className="income">R$ 5.000,00</td>
-                <td>Sell</td>
-                <td>20/04/2020</td>
-              </tr>
-              <tr>
-                <td className="title">Website Hosting</td>
-                <td className="outcome">- R$ 1.000,00</td>
-                <td>Hosting</td>
-                <td>19/04/2020</td>
-              </tr>
-            </tbody>
+            {transactions.map(transaction => {
+              return (
+                <tbody>
+                  <tr>
+                    <td className="title">{transaction.title}</td>
+                    {transaction.type === 'income' ? (
+                      <td className="income">
+                        {getValueInReais(transaction.value)}
+                      </td>
+                    ) : (
+                      <td className="outcome">
+                        {`- ${getValueInReais(transaction.value)}`}
+                      </td>
+                    )}
+                    <td>{transaction.category.title}</td>
+                    <td>
+                      {new Date(transaction.created_at).toLocaleDateString()}
+                    </td>
+                  </tr>
+                </tbody>
+              );
+            })}
           </table>
         </TableContainer>
       </Container>
